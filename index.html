@@ -578,22 +578,70 @@ function gerarPDF(result) {
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
   const setor=document.getElementById('f-setor').value;
-  result.validos.forEach((f,idx)=>{
-    if(idx>0)doc.addPage();
-    // Logo no topo
-    doc.addImage(LOGO_BASE64,'PNG',20,10,50,23);
-    // Linha separadora
-    doc.setDrawColor(200,200,200);
-    doc.line(20,36,190,36);
-    const {texto,data}=buildTextoRecibo(f);
-    doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('RECIBO',20,48);
-    doc.setFont('helvetica','normal');doc.setFontSize(11);
-    const lines=doc.splitTextToSize(texto,170);
-    doc.text(lines,20,60);
-    const y=60+lines.length*7;
-    doc.text(data,20,y+10);doc.text('____________________________________',20,y+35);doc.text('ASSINATURA',20,y+42);
-  });
-  doc.save(`Recibos_${setor}_${document.getElementById('f-mes-ref').value}.pdf`);
+  const mesRef=document.getElementById('f-mes-ref').value;
+  const validos=result.validos;
+
+  // A4 = 297mm tall. 3 recibos por página.
+  // Cada bloco ocupa ~90mm. Margens: top 8mm, entre blocos linha tracejada.
+  const blocoAltura = 90;
+  const margemTopo = 8;
+  const margemLado = 15;
+  const largura = 180;
+
+  for(let i=0; i<validos.length; i++){
+    if(i>0 && i%3===0) doc.addPage();
+    const posNaPagina = i % 3;
+    const yBase = margemTopo + posNaPagina * blocoAltura;
+
+    // Logo pequena
+    doc.addImage(LOGO_BASE64,'PNG', margemLado, yBase+2, 36, 17);
+
+    // Título RECIBO alinhado à direita da logo
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(13);
+    doc.setTextColor(30,80,50);
+    doc.text('RECIBO', 190, yBase+12, {align:'right'});
+    doc.setTextColor(0,0,0);
+
+    // Linha fina abaixo da logo
+    doc.setDrawColor(180,180,180);
+    doc.setLineWidth(0.3);
+    doc.line(margemLado, yBase+22, 195, yBase+22);
+
+    // Texto do recibo
+    const {texto,data}=buildTextoRecibo(validos[i]);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    const lines=doc.splitTextToSize(texto, largura);
+    doc.text(lines, margemLado, yBase+29);
+
+    // Data
+    const yData = yBase+29+lines.length*5;
+    doc.setFontSize(9);
+    doc.text(data, margemLado, yData+5);
+
+    // Linha de assinatura
+    doc.setDrawColor(80,80,80);
+    doc.setLineWidth(0.4);
+    doc.line(margemLado, yData+16, margemLado+70, yData+16);
+    doc.setFontSize(8);
+    doc.setTextColor(100,100,100);
+    doc.text('ASSINATURA', margemLado, yData+21);
+    doc.setTextColor(0,0,0);
+
+    // Linha tracejada separadora (exceto no último bloco da página ou último recibo)
+    const ehUltimoDaPagina = posNaPagina===2;
+    const ehUltimo = i===validos.length-1;
+    if(!ehUltimoDaPagina && !ehUltimo){
+      doc.setDrawColor(180,180,180);
+      doc.setLineWidth(0.3);
+      doc.setLineDashPattern([2,2],0);
+      doc.line(margemLado, yBase+blocoAltura-2, 195, yBase+blocoAltura-2);
+      doc.setLineDashPattern([],0);
+    }
+  }
+
+  doc.save(`Recibos_${setor}_${mesRef}.pdf`);
 }
 
 async function carregarDashboard() {
