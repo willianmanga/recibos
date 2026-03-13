@@ -302,8 +302,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="field">
             <label>Setor</label>
             <select id="f-setor">
-              <option value="GERENTE">Gerente</option>
+              <option value="VENDAS">Vendas</option>
+              <option value="RECEPÇÃO">Recepção</option>
+              <option value="REFILIAÇÃO">Refiliação</option>
+              <option value="RETENÇÃO">Retenção</option>
+              <option value="ADIMPLENCIA">Adimplência</option>
+              <option value="HOMOLOGAÇÃO">Homologação</option>
+              <option value="PARCERIAS">Parcerias</option>
               <option value="COORDENADORES">Coordenadores</option>
+              <option value="LIDERES">Líderes</option>
+              <option value="GERENTE">Gerente</option>
             </select>
           </div>
           <div class="field">
@@ -380,8 +388,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <input type="text" id="hist-busca" placeholder="Buscar por nome..." oninput="filtrarHistorico()"/>
         <select id="hist-setor" onchange="filtrarHistorico()">
           <option value="">Todos os setores</option>
-          <option>GERENTE</option>
+          <option>VENDAS</option>
+          <option>RECEPÇÃO</option>
+          <option>REFILIAÇÃO</option>
+          <option>RETENÇÃO</option>
+          <option>ADIMPLENCIA</option>
+          <option>HOMOLOGAÇÃO</option>
+          <option>PARCERIAS</option>
           <option>COORDENADORES</option>
+          <option>LIDERES</option>
+          <option>GERENTE</option>
         </select>
         <select id="hist-mes" onchange="filtrarHistorico()">
           <option value="">Todos os meses</option>
