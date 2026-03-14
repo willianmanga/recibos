@@ -518,7 +518,7 @@ function iniciarApp() {
   document.getElementById('user-name-display').textContent = email.split('@')[0];
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
-  carregarDashboard(); carregarHistorico(); carregarCadastros();
+  carregarDashboard(); carregarHistorico(); carregarCadastros(); carregarFuncDoSetor();
 }
 
 function showPage(id, el) {
@@ -529,7 +529,7 @@ function showPage(id, el) {
   if (id === 'historico') carregarHistorico();
   if (id === 'dashboard') carregarDashboard();
   if (id === 'funcionarios') carregarCadastros();
-  if (id === 'novo') setTimeout(carregarFuncDoSetor, 50);
+  if (id === 'novo') carregarFuncDoSetor();
 }
 
 function abrirModal(func) {
@@ -557,14 +557,15 @@ async function salvarFuncionarioCadastro() {
   }
   if (error) { document.getElementById('m-erro').textContent = 'Erro: ' + error.message; return; }
   fecharModal(); toast(editId ? 'Funcionario atualizado!' : 'Funcionario cadastrado!');
-  carregarCadastros(); carregarFuncDoSetor();
+  await carregarCadastros();
+  await carregarFuncDoSetor();
 }
 
 async function excluirFuncionario(id) {
   if (!confirm('Excluir este funcionario do cadastro?')) return;
   const { error } = await sb.from('funcionarios_cadastro').delete().eq('id', id);
   if (error) { toast('Erro ao excluir.', true); return; }
-  toast('Funcionario removido.'); carregarCadastros(); carregarFuncDoSetor();
+  toast('Funcionario removido.'); await carregarCadastros(); await carregarFuncDoSetor();
 }
 
 async function carregarCadastros() {
@@ -594,13 +595,17 @@ async function carregarFuncDoSetor() {
   const selEl = document.getElementById('f-setor');
   if (!selEl) return;
   const setor = selEl.value;
+  if (!setor) return;
   funcionarios = [];
   renderFuncs();
   const loading = document.getElementById('func-loading');
+  const selectWrap = document.getElementById('f-func-select');
   if (loading) loading.style.display = 'flex';
-  const { data, error } = await sb.from('funcionarios_cadastro').select('*').eq('setor', setor).order('nome');
+  if (selectWrap) selectWrap.innerHTML = '<option value="">Carregando...</option>';
+  const { data } = await sb.from('funcionarios_cadastro').select('*').eq('setor', setor).order('nome');
   if (loading) loading.style.display = 'none';
   cadastrosDoSetor = data || [];
+  console.log('Setor:', setor, '| Encontrados:', cadastrosDoSetor.length);
   atualizarSelectFunc();
 }
 
