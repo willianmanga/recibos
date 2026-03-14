@@ -620,7 +620,7 @@ async function carregarFuncDoSetor() {
   if (!selEl) return;
   const setor = selEl.value;
   if (!setor) return;
-  funcionarios = [];
+  // NÃO limpa funcionários já adicionados de outros setores
   renderFuncs();
   const loading = document.getElementById('func-loading');
   const selectWrap = document.getElementById('f-func-select');
@@ -654,7 +654,7 @@ function adicionarFuncSelecionado() {
   if (!cpf) return;
   const cadastro = cadastrosDoSetor.find(f => f.cpf === cpf);
   if (!cadastro) return;
-  funcionarios.push({ nome: cadastro.nome, cpf: cadastro.cpf, valor: '' });
+  funcionarios.push({ nome: cadastro.nome, cpf: cadastro.cpf, setor: cadastro.setor, valor: '' });
   atualizarSelectFunc();
   renderFuncs();
   // focus no valor do recém-adicionado
@@ -872,7 +872,7 @@ async function salvarESalvar() {
   const anoRec = document.getElementById('f-ano-recibo').value;
 
   // Salva no Supabase
-  const rows = funcionarios.map(f => ({ nome: f.nome, cpf: f.cpf, setor, mes_referencia: mesRef, ano_referencia: Number(anoRef), valor: f.valor, criado_por: currentUser.email }));
+  const rows = funcionarios.map(f => ({ nome: f.nome, cpf: f.cpf, setor: f.setor || setor, mes_referencia: mesRef, ano_referencia: Number(anoRef), valor: f.valor, dia_recibo: dia, mes_recibo: mesRec, ano_recibo: anoRec, criado_por: currentUser.email }));
   const { error } = await sb.from('recibos').insert(rows);
   if (error) { toast('Erro ao salvar: ' + error.message, true); return; }
 
@@ -903,7 +903,7 @@ async function salvarEPDF() {
   const anoRec = document.getElementById('f-ano-recibo').value;
 
   // Salva no Supabase
-  const rows = funcionarios.map(f => ({ nome: f.nome, cpf: f.cpf, setor, mes_referencia: mesRef, ano_referencia: Number(anoRef), valor: f.valor, criado_por: currentUser.email }));
+  const rows = funcionarios.map(f => ({ nome: f.nome, cpf: f.cpf, setor: f.setor || setor, mes_referencia: mesRef, ano_referencia: Number(anoRef), valor: f.valor, dia_recibo: dia, mes_recibo: mesRec, ano_recibo: anoRec, criado_por: currentUser.email }));
   const { error } = await sb.from('recibos').insert(rows);
   if (error) { toast('Erro ao salvar: ' + error.message, true); return; }
 
