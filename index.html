@@ -211,6 +211,37 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .valor-input{border:2px solid var(--accent-light) !important;background:#F8FBF9 !important;}
 .valor-input:focus{border-color:var(--accent) !important;}
 
+
+/* PAGINAÇÃO */
+.pagination { display:flex; align-items:center; gap:8px; padding:1rem 1.5rem; justify-content:center; border-top:1px solid var(--border); }
+.pagination button { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 12px; border-radius:var(--radius); cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text2); transition:all 0.15s; }
+.pagination button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.pagination button.active { background:var(--accent); color:white; border-color:var(--accent); }
+.pagination button:disabled { opacity:0.4; cursor:not-allowed; }
+.pagination .pg-info { font-size:13px; color:var(--text3); }
+
+/* MODAL CONFIRMAÇÃO */
+.confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:600; align-items:center; justify-content:center; }
+.confirm-overlay.open { display:flex; }
+.confirm-box { background:var(--surface); border-radius:var(--radius-lg); padding:2rem; width:100%; max-width:420px; box-shadow:var(--shadow-lg); }
+.confirm-title { font-size:17px; font-weight:600; margin-bottom:0.5rem; }
+.confirm-msg { font-size:14px; color:var(--text2); margin-bottom:1.5rem; line-height:1.6; }
+.confirm-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+/* SORTABLE HEADERS */
+.hist-table th.sortable { cursor:pointer; user-select:none; }
+.hist-table th.sortable:hover { color:var(--accent); }
+.hist-table th .sort-icon { margin-left:4px; opacity:0.5; }
+.hist-table th.sort-asc .sort-icon::after { content:'▲'; }
+.hist-table th.sort-desc .sort-icon::after { content:'▼'; }
+.hist-table th:not(.sort-asc):not(.sort-desc) .sort-icon::after { content:'⇅'; }
+
+/* BADGE IMPRESSO */
+.badge-impresso { display:inline-block; font-size:10px; font-weight:600; padding:2px 7px; border-radius:99px; background:#E8F5E9; color:#2E7D32; margin-left:4px; }
+
+/* VALOR INPUT VALIDAÇÃO */
+.valor-input.invalid { border-color:var(--danger) !important; }
+
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .main { margin-left: 0; padding: 1rem; }
@@ -265,6 +296,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 </div>
 
 <!-- Logo: desenhado via JS no PDF -->
+
+
+<!-- MODAL CONFIRMAÇÃO -->
+<div class="confirm-overlay" id="modal-confirm">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Confirmar</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-actions">
+      <button class="btn btn-outline" onclick="confirmarFechar()">Cancelar</button>
+      <button class="btn btn-primary" id="confirm-ok" style="width:auto">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 <!-- APP -->
 <div id="app-screen">
@@ -391,6 +435,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">Selecionar funcionários</div>
+        <div style="display:flex;gap:10px;margin-bottom:0.5rem;align-items:center">
+          <input type="text" id="f-func-busca" placeholder="🔍 Buscar funcionário por nome ou CPF..." oninput="filtrarSelectFunc()" style="flex:1;font-family:inherit;font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none"/>
+        </div>
         <div style="display:flex;gap:10px;margin-bottom:1rem;align-items:center">
           <select id="f-func-select" style="flex:1;font-family:var(--font,inherit);font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none">
             <option value="">— Escolha um funcionário —</option>
@@ -420,8 +467,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
 
       <div style="display:flex;gap:12px">
-        <button class="btn btn-primary" onclick="salvarESalvar()" style="flex:1">Salvar e baixar Excel</button>
-        <button class="btn btn-gold" onclick="salvarEPDF()" style="flex:1">Salvar e baixar PDF</button>
+        <button class="btn btn-primary" onclick="confirmarSalvar('excel')" style="flex:1">Salvar e baixar Excel</button>
+        <button class="btn btn-gold" onclick="confirmarSalvar('pdf')" style="flex:1">Salvar e baixar PDF</button>
+        <button class="btn btn-outline btn-sm" onclick="limparFormulario()" title="Limpar formulário" style="padding:10px 14px">✕ Limpar</button>
       </div>
     </div>
 
@@ -636,13 +684,20 @@ async function carregarFuncDoSetor() {
   atualizarSelectFunc();
 }
 
-function atualizarSelectFunc() {
+function filtrarSelectFunc() {
+  const busca = (document.getElementById('f-func-busca') || {}).value || '';
+  atualizarSelectFunc(busca);
+}
+
+function atualizarSelectFunc(busca) {
+  busca = (busca || '').toLowerCase();
   const sel = document.getElementById('f-func-select');
   if (!sel) return;
   const jaAdicionados = funcionarios.map(f => f.cpf);
   sel.innerHTML = '<option value="">— Escolha um funcionário —</option>';
   cadastrosDoSetor
     .filter(f => !jaAdicionados.includes(f.cpf))
+    .filter(f => !busca || f.nome.toLowerCase().includes(busca) || (f.cpf||'').includes(busca))
     .forEach(f => {
       const opt = document.createElement('option');
       opt.value = f.cpf;
@@ -824,16 +879,44 @@ async function carregarDashboard() {
 // ============================================================
 // HISTÓRICO
 // ============================================================
+// Estado de paginação e ordenação
+let _paginaAtual = 1;
+const _itensPorPagina = 15;
+let _sortCol = null;
+let _sortAsc = true;
+
 function filtrarHistorico() {
+  _paginaAtual = 1;
+  _renderHistoricoFiltrado();
+}
+
+function _renderHistoricoFiltrado() {
   const busca = (document.getElementById('hist-busca') || {}).value || '';
   const setor = (document.getElementById('hist-setor') || {}).value || '';
   const mes = (document.getElementById('hist-mes') || {}).value || '';
-  const lista = todosRecibos.filter(r =>
-    (!busca || r.nome.toLowerCase().includes(busca.toLowerCase())) &&
+  let lista = todosRecibos.filter(r =>
+    (!busca || r.nome.toLowerCase().includes(busca.toLowerCase()) || (r.cpf || '').includes(busca)) &&
     (!setor || r.setor === setor) &&
     (!mes || r.mes_referencia === mes)
   );
+  // Ordenação
+  if (_sortCol) {
+    lista = [...lista].sort((a, b) => {
+      let va = a[_sortCol] || ''; let vb = b[_sortCol] || '';
+      if (_sortCol === 'valor') { va = parseFloat(va)||0; vb = parseFloat(vb)||0; }
+      if (va < vb) return _sortAsc ? -1 : 1;
+      if (va > vb) return _sortAsc ? 1 : -1;
+      return 0;
+    });
+  }
   renderHistorico(lista);
+}
+
+function sortHistorico(col) {
+  if (_sortCol === col) _sortAsc = !_sortAsc;
+  else { _sortCol = col; _sortAsc = true; }
+  _paginaAtual = 1;
+  _renderHistoricoFiltrado();
 }
 
 function atualizarBotaoSel() {
@@ -841,103 +924,111 @@ function atualizarBotaoSel() {
   const btn = document.getElementById('btn-reimprimir-sel');
   const qtd = document.getElementById('qtd-sel');
   if (!btn || !qtd) return;
-  if (checks.length > 0) {
-    btn.style.display = 'inline-flex';
-    qtd.textContent = checks.length;
-  } else {
-    btn.style.display = 'none';
-  }
+  if (checks.length > 0) { btn.style.display = 'inline-flex'; qtd.textContent = checks.length; }
+  else { btn.style.display = 'none'; }
 }
 
 function renderHistorico(lista) {
   const el = document.getElementById('hist-content');
   if (!el) return;
+  const btnSel = document.getElementById('btn-reimprimir-sel');
   if (lista.length === 0) {
     el.innerHTML = '<div class="empty-state"><div class="icon">◎</div><p>Nenhum recibo encontrado.</p></div>';
-    // Esconder botão
-    const btn = document.getElementById('btn-reimprimir-sel');
-    if (btn) btn.style.display = 'none';
+    if (btnSel) btnSel.style.display = 'none';
     return;
   }
   window._historicoLista = lista;
+
+  // Paginação
+  const total = lista.length;
+  const totalPags = Math.ceil(total / _itensPorPagina);
+  if (_paginaAtual > totalPags) _paginaAtual = totalPags;
+  const inicio = (_paginaAtual - 1) * _itensPorPagina;
+  const paginaItems = lista.slice(inicio, inicio + _itensPorPagina);
+
+  const thSort = (label, col) => {
+    const cls = _sortCol === col ? (_sortAsc ? 'sortable sort-asc' : 'sortable sort-desc') : 'sortable';
+    return `<th class="${cls}" onclick="sortHistorico('${col}')">${label}<span class="sort-icon"></span></th>`;
+  };
+
   el.innerHTML =
     '<table class="hist-table"><thead><tr>' +
     '<th><input type="checkbox" id="check-all" title="Selecionar todos"/></th>' +
-    '<th>Funcionário</th><th>CPF</th><th>Setor</th><th>Referência</th><th>Valor</th><th>Gerado em</th><th></th>' +
-    '</tr></thead><tbody>' +
-    lista.map((r, idx) => {
+    thSort('Funcionário','nome') +
+    '<th>CPF</th>' +
+    thSort('Setor','setor') +
+    thSort('Referência','mes_referencia') +
+    thSort('Valor','valor') +
+    thSort('Gerado em','created_at') +
+    '<th></th></tr></thead><tbody>' +
+    paginaItems.map((r, idx) => {
+      const realIdx = inicio + idx;
       const valorFmt = 'R$ ' + (parseFloat(r.valor) || 0).toFixed(2).replace('.', ',');
       const data = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—';
+      const impresso = r.impresso ? '<span class="badge-impresso">✓ Impresso</span>' : '';
       return '<tr>' +
-        '<td><input type="checkbox" class="hist-check" data-idx="' + idx + '" onchange="atualizarBotaoSel()"/></td>' +
-        '<td>' + r.nome + '</td>' +
-        '<td style="color:var(--text3);font-size:12px">' + r.cpf + '</td>' +
-        '<td><span class="badge-setor">' + r.setor + '</span></td>' +
-        '<td>' + r.mes_referencia + '/' + r.ano_referencia + '</td>' +
-        '<td>' + valorFmt + '</td>' +
-        '<td style="color:var(--text3);font-size:12px">' + data + '</td>' +
-        '<td><button class="btn btn-gold btn-sm" data-idx="' + idx + '" title="Gerar PDF deste recibo">⎙</button></td>' +
-        '</tr>';
+        `<td><input type="checkbox" class="hist-check" data-idx="${realIdx}" onchange="atualizarBotaoSel()"/></td>` +
+        `<td>${r.nome}${impresso}</td>` +
+        `<td style="color:var(--text3);font-size:12px">${r.cpf}</td>` +
+        `<td><span class="badge-setor">${r.setor}</span></td>` +
+        `<td>${r.mes_referencia}/${r.ano_referencia}</td>` +
+        `<td>${valorFmt}</td>` +
+        `<td style="color:var(--text3);font-size:12px">${data}</td>` +
+        `<td style="display:flex;gap:4px">` +
+        `<button class="btn btn-gold btn-sm" data-idx="${realIdx}" title="Gerar PDF">⎙</button>` +
+        `<button class="btn btn-danger btn-sm" data-del="${r.id}" title="Excluir registro">🗑</button>` +
+        `</td></tr>`;
     }).join('') +
     '</tbody></table>';
+
+  // Paginação HTML
+  if (totalPags > 1) {
+    let pgHtml = '<div class="pagination">';
+    pgHtml += `<button onclick="irPagina(${_paginaAtual-1})" ${_paginaAtual===1?'disabled':''}>‹ Ant.</button>`;
+    const start = Math.max(1, _paginaAtual-2);
+    const end = Math.min(totalPags, _paginaAtual+2);
+    if (start > 1) pgHtml += `<button onclick="irPagina(1)">1</button>${start>2?'<span class="pg-info">…</span>':''}`;
+    for (let p = start; p <= end; p++) {
+      pgHtml += `<button class="${p===_paginaAtual?'active':''}" onclick="irPagina(${p})">${p}</button>`;
+    }
+    if (end < totalPags) pgHtml += `${end<totalPags-1?'<span class="pg-info">…</span>':''}<button onclick="irPagina(${totalPags})">${totalPags}</button>`;
+    pgHtml += `<button onclick="irPagina(${_paginaAtual+1})" ${_paginaAtual===totalPags?'disabled':''}>Próx. ›</button>`;
+    pgHtml += `<span class="pg-info">${inicio+1}–${Math.min(inicio+_itensPorPagina,total)} de ${total}</span>`;
+    pgHtml += '</div>';
+    el.innerHTML += pgHtml;
+  }
 
   // Selecionar todos
   document.getElementById('check-all').addEventListener('change', function() {
     document.querySelectorAll('.hist-check').forEach(c => { c.checked = this.checked; });
     atualizarBotaoSel();
   });
-
-  // Botão individual
-  el.querySelectorAll('button[data-idx]').forEach(function(btn) {
+  // PDF individual
+  el.querySelectorAll('button[data-idx]').forEach(btn => {
     btn.addEventListener('click', function() {
-      reimprimirRecibo(window._historicoLista[parseInt(this.getAttribute('data-idx'))]);
+      const r = window._historicoLista[parseInt(this.getAttribute('data-idx'))];
+      reimprimirRecibo(r);
+    });
+  });
+  // Excluir
+  el.querySelectorAll('button[data-del]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-del');
+      confirmar('Excluir recibo', 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.', async () => {
+        const { error } = await sb.from('recibos').delete().eq('id', id);
+        if (error) { toast('Erro ao excluir: ' + error.message, true); return; }
+        toast('Registro excluído.');
+        await carregarDashboard();
+        await carregarHistorico();
+      });
     });
   });
 }
 
-function reimprimirSelecionados() {
-  const checks = document.querySelectorAll('.hist-check:checked');
-  if (checks.length === 0) { toast('Selecione pelo menos um recibo.', true); return; }
-  const selecionados = Array.from(checks).map(c => window._historicoLista[parseInt(c.getAttribute('data-idx'))]);
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    const maxW = pageW - margin * 2;
-    const logoBase64 = getLogoBase64();
-    selecionados.forEach((r, i) => {
-      const slotIndex = i % 3;
-      if (i > 0 && slotIndex === 0) doc.addPage();
-      desenharReciboNoPDF(doc, r, slotIndex, pageW, pageH, margin, maxW, logoBase64, r.mes_referencia);
-    });
-    doc.save('recibos_selecionados_' + selecionados.length + '.pdf');
-    toast(selecionados.length + ' recibo(s) gerado(s) com sucesso!');
-  } catch(e) {
-    console.error(e);
-    toast('Erro ao gerar PDF: ' + e.message, true);
-  }
+function irPagina(p) {
+  _paginaAtual = p;
+  _renderHistoricoFiltrado();
 }
-
-function reimprimirRecibo(r) {
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    const maxW = pageW - margin * 2;
-    const logoBase64 = getLogoBase64();
-    desenharReciboNoPDF(doc, r, 0, pageW, pageH, margin, maxW, logoBase64, r.mes_referencia);
-    doc.save('recibo_' + r.nome.split(' ')[0] + '_' + r.mes_referencia + '.pdf');
-    toast('PDF gerado com sucesso!');
-  } catch(e) {
-    console.error(e);
-    toast('Erro ao gerar PDF: ' + e.message, true);
-  }
-}
-
 
 async function carregarHistorico() {
   const el = document.getElementById('hist-content');
@@ -947,6 +1038,7 @@ async function carregarHistorico() {
     const { data, error } = await sb.from('recibos').select('*').order('created_at', { ascending: false });
     if (error) { el.innerHTML = '<p>Erro ao carregar histórico.</p>'; return; }
     todosRecibos = data || [];
+    _paginaAtual = 1;
     filtrarHistorico();
   } catch(e) { el.innerHTML = '<p>Erro ao carregar histórico.</p>'; }
 }
@@ -1128,6 +1220,115 @@ async function salvarEPDF() {
     await carregarDashboard();
     await carregarHistorico();
   } catch(e) { console.error(e); toast('Erro ao gerar PDF: ' + e.message, true); }
+}
+
+// ============================================================
+// MODAL DE CONFIRMAÇÃO
+// ============================================================
+let _confirmCallback = null;
+function confirmar(titulo, msg, callback) {
+  document.getElementById('confirm-title').textContent = titulo;
+  document.getElementById('confirm-msg').textContent = msg;
+  _confirmCallback = callback;
+  document.getElementById('modal-confirm').classList.add('open');
+}
+function confirmarFechar() {
+  document.getElementById('modal-confirm').classList.remove('open');
+  _confirmCallback = null;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('confirm-ok').addEventListener('click', () => {
+    confirmarFechar();
+    if (_confirmCallback) _confirmCallback();
+  });
+});
+
+// ============================================================
+// CONFIRMAR SALVAR (evita duplo clique)
+// ============================================================
+let _salvando = false;
+function confirmarSalvar(tipo) {
+  if (funcionarios.length === 0) { toast('Adicione pelo menos um funcionário.', true); return; }
+  // Validar valores
+  const semValor = funcionarios.filter(f => !f.valor || parseFloat(String(f.valor).replace(',','.')) <= 0);
+  if (semValor.length > 0) {
+    toast('Preencha o valor de todos os funcionários antes de salvar.', true);
+    // Marcar campos inválidos
+    document.querySelectorAll('.valor-input').forEach((inp, i) => {
+      const v = funcionarios[i] ? parseFloat(String(funcionarios[i].valor||'0').replace(',','.')) : 0;
+      inp.classList.toggle('invalid', v <= 0);
+    });
+    return;
+  }
+  document.querySelectorAll('.valor-input').forEach(inp => inp.classList.remove('invalid'));
+
+  const nomes = funcionarios.map(f => f.nome.split(' ')[0]).join(', ');
+  const msg = `Serão salvos ${funcionarios.length} recibo(s) para: ${nomes}.\nEsta ação não pode ser desfeita.`;
+  confirmar('Confirmar geração de recibos', msg, () => {
+    if (_salvando) return;
+    _salvando = true;
+    const fn = tipo === 'pdf' ? salvarEPDF : salvarESalvar;
+    fn().finally(() => { _salvando = false; });
+  });
+}
+
+// ============================================================
+// LIMPAR FORMULÁRIO
+// ============================================================
+function limparFormulario() {
+  if (funcionarios.length === 0) return;
+  confirmar('Limpar formulário', 'Tem certeza? Todos os funcionários adicionados serão removidos.', () => {
+    funcionarios = [];
+    renderFuncs();
+    atualizarPreview();
+    toast('Formulário limpo.');
+  });
+}
+
+// ============================================================
+// REIMPRIMIR COM MARCAÇÃO
+// ============================================================
+function reimprimirSelecionados() {
+  const checks = document.querySelectorAll('.hist-check:checked');
+  if (checks.length === 0) { toast('Selecione pelo menos um recibo.', true); return; }
+  const selecionados = Array.from(checks).map(c => window._historicoLista[parseInt(c.getAttribute('data-idx'))]);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const maxW = pageW - margin * 2;
+    const logoBase64 = getLogoBase64();
+    selecionados.forEach((r, i) => {
+      const slotIndex = i % 3;
+      if (i > 0 && slotIndex === 0) doc.addPage();
+      desenharReciboNoPDF(doc, r, slotIndex, pageW, pageH, margin, maxW, logoBase64, r.mes_referencia);
+    });
+    doc.save('recibos_selecionados_' + selecionados.length + '.pdf');
+    toast(selecionados.length + ' recibo(s) gerado(s) com sucesso!');
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao gerar PDF: ' + e.message, true);
+  }
+}
+
+function reimprimirRecibo(r) {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const maxW = pageW - margin * 2;
+    const logoBase64 = getLogoBase64();
+    desenharReciboNoPDF(doc, r, 0, pageW, pageH, margin, maxW, logoBase64, r.mes_referencia);
+    doc.save('recibo_' + r.nome.split(' ')[0] + '_' + r.mes_referencia + '.pdf');
+    toast('PDF gerado com sucesso!');
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao gerar PDF: ' + e.message, true);
+  }
 }
 
 // ============================================================
