@@ -696,9 +696,189 @@ function renderFuncs() {
   atualizarPreview();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // if landing on novo page, load funcs after auth
-});
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (isError ? ' error' : '');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ============================================================
+// PREVIEW
+// ============================================================
+function atualizarPreview() {
+  const box = document.getElementById('preview-box');
+  if (!box) return;
+  if (funcionarios.length === 0) { box.innerHTML = 'Preencha os dados acima...'; return; }
+  const f = funcionarios[0];
+  const setor = (document.getElementById('f-setor') || {}).value || '';
+  const mesRef = (document.getElementById('f-mes-ref') || {}).value || '';
+  const anoRef = (document.getElementById('f-ano-ref') || {}).value || '';
+  const dia = (document.getElementById('f-dia') || {}).value || '';
+  const mesRec = (document.getElementById('f-mes-recibo') || {}).value || '';
+  const anoRec = (document.getElementById('f-ano-recibo') || {}).value || '';
+  const valor = f.valor ? 'R$ ' + f.valor : '—';
+  box.innerHTML = '<strong>Recibo de Premiação</strong>\n\n' +
+    'Funcionário: ' + f.nome + '\n' +
+    'CPF: ' + f.cpf + '\n' +
+    'Setor: ' + setor + '\n' +
+    'Mês de Referência: ' + mesRef + '/' + anoRef + '\n' +
+    'Valor: ' + valor + '\n' +
+    'Data: ' + dia + ' de ' + mesRec + ' de ' + anoRec;
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function carregarDashboard() {
+  try {
+    const { data, error } = await sb.from('recibos').select('*');
+    if (error) { console.error('Erro dashboard:', error); return; }
+    todosRecibos = data || [];
+    const total = todosRecibos.length;
+    const mesAtual = new Date().toLocaleString('pt-BR', { month: 'long' }).toUpperCase();
+    const anoAtual = new Date().getFullYear();
+    const recibosDoMes = todosRecibos.filter(r => r.mes_referencia === mesAtual && Number(r.ano_referencia) === anoAtual);
+    const somaValores = todosRecibos.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
+    const elTotal = document.getElementById('stat-total');
+    const elMes = document.getElementById('stat-mes');
+    const elMesLabel = document.getElementById('stat-mes-label');
+    const elValor = document.getElementById('stat-valor');
+    if (elTotal) elTotal.textContent = total;
+    if (elMes) elMes.textContent = recibosDoMes.length;
+    if (elMesLabel) elMesLabel.textContent = mesAtual + ' ' + anoAtual;
+    if (elValor) elValor.textContent = 'R$ ' + somaValores.toFixed(2).replace('.', ',');
+    const dashRecentes = document.getElementById('dash-recentes');
+    if (dashRecentes) {
+      const recentes = [...todosRecibos].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
+      if (recentes.length === 0) {
+        dashRecentes.innerHTML = '<div class="empty-state"><div class="icon">◎</div><p>Nenhum recibo gerado ainda.</p></div>';
+      } else {
+        dashRecentes.innerHTML = '<table class="hist-table"><thead><tr><th>Funcionário</th><th>Setor</th><th>Referência</th><th>Valor</th></tr></thead><tbody>' +
+          recentes.map(r => '<tr><td>' + r.nome + '</td><td><span class="badge-setor">' + r.setor + '</span></td><td>' + r.mes_referencia + '/' + r.ano_referencia + '</td><td>R$ ' + (parseFloat(r.valor) || 0).toFixed(2).replace('.', ',') + '</td></tr>').join('') +
+          '</tbody></table>';
+      }
+    }
+  } catch(e) { console.error('Erro dashboard:', e); }
+}
+
+// ============================================================
+// HISTÓRICO
+// ============================================================
+function filtrarHistorico() {
+  const busca = (document.getElementById('hist-busca') || {}).value || '';
+  const setor = (document.getElementById('hist-setor') || {}).value || '';
+  const mes = (document.getElementById('hist-mes') || {}).value || '';
+  const lista = todosRecibos.filter(r =>
+    (!busca || r.nome.toLowerCase().includes(busca.toLowerCase())) &&
+    (!setor || r.setor === setor) &&
+    (!mes || r.mes_referencia === mes)
+  );
+  renderHistorico(lista);
+}
+
+function renderHistorico(lista) {
+  const el = document.getElementById('hist-content');
+  if (!el) return;
+  if (lista.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">◎</div><p>Nenhum recibo encontrado.</p></div>';
+    return;
+  }
+  el.innerHTML = '<table class="hist-table"><thead><tr><th>Funcionário</th><th>CPF</th><th>Setor</th><th>Referência</th><th>Valor</th><th>Gerado em</th></tr></thead><tbody>' +
+    lista.map(r => '<tr><td>' + r.nome + '</td><td style="color:var(--text3);font-size:12px">' + r.cpf + '</td><td><span class="badge-setor">' + r.setor + '</span></td><td>' + r.mes_referencia + '/' + r.ano_referencia + '</td><td>R$ ' + (parseFloat(r.valor) || 0).toFixed(2).replace('.', ',') + '</td><td style="color:var(--text3);font-size:12px">' + (r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—') + '</td></tr>').join('') +
+    '</tbody></table>';
+}
+
+async function carregarHistorico() {
+  const el = document.getElementById('hist-content');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Carregando...</div>';
+  try {
+    const { data, error } = await sb.from('recibos').select('*').order('created_at', { ascending: false });
+    if (error) { el.innerHTML = '<p>Erro ao carregar histórico.</p>'; return; }
+    todosRecibos = data || [];
+    filtrarHistorico();
+  } catch(e) { el.innerHTML = '<p>Erro ao carregar histórico.</p>'; }
+}
+
+// ============================================================
+// SALVAR RECIBOS — EXCEL
+// ============================================================
+async function salvarESalvar() {
+  if (funcionarios.length === 0) { toast('Adicione pelo menos um funcionário.', true); return; }
+  const setor = document.getElementById('f-setor').value;
+  const mesRef = document.getElementById('f-mes-ref').value;
+  const anoRef = document.getElementById('f-ano-ref').value;
+  const dia = document.getElementById('f-dia').value;
+  const mesRec = document.getElementById('f-mes-recibo').value;
+  const anoRec = document.getElementById('f-ano-recibo').value;
+
+  // Salva no Supabase
+  const rows = funcionarios.map(f => ({ nome: f.nome, cpf: f.cpf, setor, mes_referencia: mesRef, ano_referencia: Number(anoRef), valor: f.valor, criado_por: currentUser.email }));
+  const { error } = await sb.from('recibos').insert(rows);
+  if (error) { toast('Erro ao salvar: ' + error.message, true); return; }
+
+  // Gera Excel
+  try {
+    const WB = XLSX.utils.book_new();
+    const wsData = [['Funcionário', 'CPF', 'Setor', 'Mês Ref.', 'Ano Ref.', 'Valor (R$)', 'Data Recibo']];
+    funcionarios.forEach(f => wsData.push([f.nome, f.cpf, setor, mesRef, anoRef, f.valor, dia + '/' + mesRec + '/' + anoRec]));
+    const WS = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(WB, WS, 'Recibos');
+    XLSX.writeFile(WB, 'recibos_' + setor + '_' + mesRef + '_' + anoRef + '.xlsx');
+    toast('Recibos salvos e Excel gerado!');
+    await carregarDashboard();
+    await carregarHistorico();
+  } catch(e) { toast('Erro ao gerar Excel.', true); }
+}
+
+// ============================================================
+// SALVAR RECIBOS — PDF
+// ============================================================
+async function salvarEPDF() {
+  if (funcionarios.length === 0) { toast('Adicione pelo menos um funcionário.', true); return; }
+  const setor = document.getElementById('f-setor').value;
+  const mesRef = document.getElementById('f-mes-ref').value;
+  const anoRef = document.getElementById('f-ano-ref').value;
+  const dia = document.getElementById('f-dia').value;
+  const mesRec = document.getElementById('f-mes-recibo').value;
+  const anoRec = document.getElementById('f-ano-recibo').value;
+
+  // Salva no Supabase
+  const rows = funcionarios.map(f => ({ nome: f.nome, cpf: f.cpf, setor, mes_referencia: mesRef, ano_referencia: Number(anoRef), valor: f.valor, criado_por: currentUser.email }));
+  const { error } = await sb.from('recibos').insert(rows);
+  if (error) { toast('Erro ao salvar: ' + error.message, true); return; }
+
+  // Gera PDF
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 20;
+    doc.setFontSize(14);
+    doc.text('Recibos de Premiação — ' + setor, 20, y); y += 10;
+    doc.setFontSize(10);
+    doc.text('Referência: ' + mesRef + '/' + anoRef + '  |  Data: ' + dia + ' de ' + mesRec + ' de ' + anoRec, 20, y); y += 12;
+    funcionarios.forEach((f, i) => {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFontSize(11);
+      doc.text((i+1) + '. ' + f.nome + ' — CPF: ' + f.cpf + '  |  R$ ' + (f.valor || '0,00'), 20, y);
+      y += 8;
+      doc.setFontSize(9);
+      doc.text('   Assinatura: ___________________________', 20, y);
+      y += 12;
+    });
+    doc.save('recibos_' + setor + '_' + mesRef + '_' + anoRef + '.pdf');
+    toast('Recibos salvos e PDF gerado!');
+    await carregarDashboard();
+    await carregarHistorico();
+  } catch(e) { toast('Erro ao gerar PDF.', true); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {});
 checkSession();
 </script>
 </body>
