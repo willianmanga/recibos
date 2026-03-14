@@ -388,22 +388,28 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
 
       <div class="card" style="margin-bottom:1rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <div><div class="card-title" style="margin:0">Funcionários do setor</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Preencha apenas o valor de cada um</div></div>
-          <button class="btn btn-outline btn-sm" onclick="adicionarManual()">+ Adicionar manual</button>
+        <div class="card-title">Selecionar funcionários</div>
+        <div style="display:flex;gap:10px;margin-bottom:1rem;align-items:center">
+          <select id="f-func-select" style="flex:1;font-family:var(--font,inherit);font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none">
+            <option value="">— Escolha um funcionário —</option>
+          </select>
+          <button class="btn btn-green" onclick="adicionarFuncSelecionado()">+ Adicionar</button>
         </div>
-        <div id="func-loading" class="loading" style="display:none"><div class="spinner"></div> Carregando funcionários...</div>
+        <div id="func-loading" class="loading" style="display:none"><div class="spinner"></div> Carregando...</div>
         <table class="func-table" id="func-table-el">
           <thead>
             <tr>
               <th>Nome</th>
               <th>CPF</th>
-              <th style="width:160px">Valor (R$)</th>
+              <th style="width:160px">Valor (R$) ✎</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="func-body"></tbody>
         </table>
+        <div id="func-empty" style="text-align:center;padding:2rem;color:var(--text3);font-size:13px;display:none">
+          Nenhum funcionário adicionado ainda. Use o seletor acima.
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:1rem">
@@ -582,45 +588,82 @@ function renderCadastros(lista) {
     '</tbody></table>';
 }
 
+let cadastrosDoSetor = [];
+
 async function carregarFuncDoSetor() {
   const setor = document.getElementById('f-setor') ? document.getElementById('f-setor').value : null;
   if (!setor) return;
+  funcionarios = [];
+  renderFuncs();
   const loading = document.getElementById('func-loading');
-  const table = document.getElementById('func-table-el');
   if (loading) loading.style.display = 'flex';
-  if (table) table.style.display = 'none';
   const { data } = await sb.from('funcionarios_cadastro').select('*').eq('setor', setor).order('nome');
   if (loading) loading.style.display = 'none';
-  if (table) table.style.display = 'table';
-  funcionarios = (data || []).map(f => ({ nome: f.nome, cpf: f.cpf, valor: '' }));
+  cadastrosDoSetor = data || [];
+  atualizarSelectFunc();
+}
+
+function atualizarSelectFunc() {
+  const sel = document.getElementById('f-func-select');
+  if (!sel) return;
+  const jaAdicionados = funcionarios.map(f => f.cpf);
+  sel.innerHTML = '<option value="">— Escolha um funcionário —</option>';
+  cadastrosDoSetor
+    .filter(f => !jaAdicionados.includes(f.cpf))
+    .forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.cpf;
+      opt.textContent = f.nome;
+      sel.appendChild(opt);
+    });
+}
+
+function adicionarFuncSelecionado() {
+  const sel = document.getElementById('f-func-select');
+  const cpf = sel.value;
+  if (!cpf) return;
+  const cadastro = cadastrosDoSetor.find(f => f.cpf === cpf);
+  if (!cadastro) return;
+  funcionarios.push({ nome: cadastro.nome, cpf: cadastro.cpf, valor: '' });
+  atualizarSelectFunc();
+  renderFuncs();
+  // focus no valor do recém-adicionado
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#func-body .valor-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 80);
+}
+
+function removeFunc(i) {
+  funcionarios.splice(i, 1);
+  atualizarSelectFunc();
   renderFuncs();
 }
 
-function adicionarManual() { funcionarios.push({ nome: '', cpf: '', valor: '' }); renderFuncs(); }
-function removeFunc(i) { funcionarios.splice(i, 1); renderFuncs(); }
-
 function renderFuncs() {
   const tbody = document.getElementById('func-body');
+  const empty = document.getElementById('func-empty');
+  const table = document.getElementById('func-table-el');
   if (!tbody) return;
   tbody.innerHTML = '';
+  if (funcionarios.length === 0) {
+    if (table) table.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    atualizarPreview();
+    return;
+  }
+  if (table) table.style.display = 'table';
+  if (empty) empty.style.display = 'none';
   funcionarios.forEach((f, i) => {
     const tr = document.createElement('tr');
-    const isCadastrado = f.cpf && todosCadastros.some(c => c.cpf === f.cpf);
-    if (isCadastrado) {
-      tr.innerHTML = '<td style="font-weight:500">' + f.nome + '</td><td style="color:var(--text3);font-size:12px">' + f.cpf + '</td>' +
-        '<td><input class="valor-input" type="text" placeholder="0,00" value="' + f.valor + '" oninput="funcionarios[' + i + '].valor=this.value;atualizarPreview()"/></td>' +
-        '<td><button class="btn btn-danger btn-sm" onclick="removeFunc(' + i + ')">x</button></td>';
-    } else {
-      tr.innerHTML = '<td><input type="text" placeholder="NOME COMPLETO" value="' + f.nome + '" oninput="funcionarios[' + i + '].nome=this.value.toUpperCase();this.value=funcionarios[' + i + '].nome;atualizarPreview()" style="text-transform:uppercase"/></td>' +
-        '<td><input type="text" placeholder="000.000.000-00" value="' + f.cpf + '" oninput="funcionarios[' + i + '].cpf=this.value;atualizarPreview()"/></td>' +
-        '<td><input class="valor-input" type="text" placeholder="0,00" value="' + f.valor + '" oninput="funcionarios[' + i + '].valor=this.value;atualizarPreview()"/></td>' +
-        '<td><button class="btn btn-danger btn-sm" onclick="removeFunc(' + i + ')">x</button></td>';
-    }
+    tr.innerHTML =
+      '<td style="font-weight:500">' + f.nome + '</td>' +
+      '<td style="color:var(--text3);font-size:12px">' + f.cpf + '</td>' +
+      '<td><input class="valor-input" type="text" placeholder="0,00" value="' + f.valor + '" oninput="funcionarios[' + i + '].valor=this.value;atualizarPreview()"/></td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="removeFunc(' + i + ')">✕</button></td>';
     tbody.appendChild(tr);
   });
   atualizarPreview();
-  const first = tbody.querySelector('.valor-input');
-  if (first) setTimeout(() => first.focus(), 80);
 }
 
 checkSession();
