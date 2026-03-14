@@ -534,6 +534,7 @@ function abrirModal(func) {
   document.getElementById('modal-func').dataset.editId = func ? func.id : '';
   document.getElementById('modal-func').classList.add('open');
 }
+function abrirModalEnc(enc) { abrirModal(JSON.parse(decodeURIComponent(enc))); }
 function fecharModal() { document.getElementById('modal-func').classList.remove('open'); }
 
 async function salvarFuncionarioCadastro() {
@@ -574,7 +575,10 @@ function renderCadastros(lista) {
   const el = document.getElementById('cadastros-content');
   if (lista.length === 0) { el.innerHTML = '<div class="empty-state"><div class="icon">&#9673;</div><p>Nenhum funcionario cadastrado ainda.<br>Clique em "+ Novo funcionario" para comecar.</p></div>'; return; }
   el.innerHTML = '<table class="hist-table"><thead><tr><th>Nome</th><th>CPF</th><th>Setor</th><th>Acoes</th></tr></thead><tbody>' +
-    lista.map(f => '<tr><td>' + f.nome + '</td><td style="color:var(--text3)">' + f.cpf + '</td><td><span class="badge-setor">' + f.setor + '</span></td><td><div class="action-btns"><button class="btn btn-outline btn-sm" onclick='abrirModal(' + JSON.stringify(f) + ')'>Editar</button><button class="btn btn-danger btn-sm" onclick="excluirFuncionario(' + f.id + ')">Excluir</button></div></td></tr>').join('') +
+    lista.map(f => {
+    const enc = encodeURIComponent(JSON.stringify(f));
+    return '<tr><td>' + f.nome + '</td><td style="color:var(--text3)">' + f.cpf + '</td><td><span class="badge-setor">' + f.setor + '</span></td><td><div class="action-btns"><button class="btn btn-outline btn-sm" onclick="abrirModalEnc(\'' + enc + '\')">Editar</button><button class="btn btn-danger btn-sm" onclick="excluirFuncionario(' + f.id + ')">Excluir</button></div></td></tr>';
+  }).join('') +
     '</tbody></table>';
 }
 
