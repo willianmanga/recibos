@@ -518,7 +518,7 @@ function iniciarApp() {
   document.getElementById('user-name-display').textContent = email.split('@')[0];
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
-  carregarDashboard(); carregarHistorico(); carregarCadastros(); carregarFuncDoSetor();
+  carregarDashboard(); carregarHistorico(); carregarCadastros();
 }
 
 function showPage(id, el) {
@@ -529,7 +529,7 @@ function showPage(id, el) {
   if (id === 'historico') carregarHistorico();
   if (id === 'dashboard') carregarDashboard();
   if (id === 'funcionarios') carregarCadastros();
-  if (id === 'novo') carregarFuncDoSetor();
+  if (id === 'novo') setTimeout(carregarFuncDoSetor, 50);
 }
 
 function abrirModal(func) {
@@ -591,13 +591,14 @@ function renderCadastros(lista) {
 let cadastrosDoSetor = [];
 
 async function carregarFuncDoSetor() {
-  const setor = document.getElementById('f-setor') ? document.getElementById('f-setor').value : null;
-  if (!setor) return;
+  const selEl = document.getElementById('f-setor');
+  if (!selEl) return;
+  const setor = selEl.value;
   funcionarios = [];
   renderFuncs();
   const loading = document.getElementById('func-loading');
   if (loading) loading.style.display = 'flex';
-  const { data } = await sb.from('funcionarios_cadastro').select('*').eq('setor', setor).order('nome');
+  const { data, error } = await sb.from('funcionarios_cadastro').select('*').eq('setor', setor).order('nome');
   if (loading) loading.style.display = 'none';
   cadastrosDoSetor = data || [];
   atualizarSelectFunc();
@@ -666,6 +667,9 @@ function renderFuncs() {
   atualizarPreview();
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  // if landing on novo page, load funcs after auth
+});
 checkSession();
 </script>
 </body>
