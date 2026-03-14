@@ -1313,7 +1313,7 @@ function reimprimirSelecionados() {
   }
 }
 
-function reimprimirRecibo(r) {
+async function reimprimirRecibo(r) {
   try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -1325,6 +1325,14 @@ function reimprimirRecibo(r) {
     desenharReciboNoPDF(doc, r, 0, pageW, pageH, margin, maxW, logoBase64, r.mes_referencia);
     doc.save('recibo_' + r.nome.split(' ')[0] + '_' + r.mes_referencia + '.pdf');
     toast('PDF gerado com sucesso!');
+    // Marcar como impresso no banco
+    if (r.id) {
+      await sb.from('recibos').update({ impresso: true }).eq('id', r.id);
+      // Atualizar localmente sem recarregar tudo
+      const rec = todosRecibos.find(x => x.id === r.id);
+      if (rec) rec.impresso = true;
+      _renderHistoricoFiltrado();
+    }
   } catch(e) {
     console.error(e);
     toast('Erro ao gerar PDF: ' + e.message, true);
@@ -1334,7 +1342,6 @@ function reimprimirRecibo(r) {
 // ============================================================
 // FIM
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {});
 checkSession();
 </script>
 </body>
