@@ -768,10 +768,10 @@ function atualizarPreview() {
 
   // CPF sem formatação para exibir no modelo
   const cpfLimpo = f.cpf.replace(/[\.\-]/g, '');
-  const valorRaw = (f.valor || '0').replace(',', '.');
+  const valorRaw = String(f.valor || '0').replace(',', '.');
   const valorNumP = parseFloat(valorRaw) || 0;
   const valorFormatado = f.valor ? 'R$ ' + valorNumP.toFixed(2).replace('.', ',') : 'R$ —';
-  const extenso = f.valor ? valorPorExtenso(f.valor) : '—';
+  const extenso = f.valor ? valorPorExtenso(String(f.valor)) : '—';
 
   const texto =
     'RECIBO\n\n' +
@@ -996,10 +996,10 @@ function desenharReciboNoPDF(doc, f, slotIndex, pageW, pageH, margin, maxW, logo
   y += 5;
 
   const cpfLimpo = f.cpf.replace(/[\.\-]/g, '');
-  const valorRaw = (f.valor || '0').replace(',', '.');
+  const valorRaw = String(f.valor || '0').replace(',', '.');
   const valorNum = parseFloat(valorRaw) || 0;
   const valorFmt = 'R$ ' + valorNum.toFixed(2).replace('.', ',');
-  const extenso = valorPorExtenso(f.valor || '0');
+  const extenso = valorPorExtenso(String(f.valor || '0'));
   const mesRefRecibo = mesRef || f.mes_referencia || '—';
 
   const partes = [
