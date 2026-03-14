@@ -264,8 +264,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   </div>
 </div>
 
-<!-- Logo oculto para o PDF — já carregado em base64 -->
-<img id="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAHaCAYAAACegDttAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAEAAElEQVR4nOz9d5wl13Xgef6uiYhn0pcvoAAU4T1AgAQIWtGTkiiJEmWaMpQ03VJrWj09s2Y+O//OH7s7n11192jbSU11t1qivERSFEVP0YAgIIIgCUMPXwDKp3smzL1n/4h46SqrKquyLOp88/PKZL4XL97LyMg85557LiillFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUuoCY870DSil1MjvvQY70YO/V8Oa3v4LgFnA+klgHgEQLWAgeJMWEFGKbP/mjhxn0YPExPdcppZRSSimlF8VKqQvOZW9CfuoXOpSmz5bdcMttVzEx08U6EGPoDYa0Wi1CKMFUzaMiRgAsVjxIggltiF0+/tEvEMsxXJzgTz+0jyNf1HOfUkoppZS69OhFsFLqgjDxSuTX/vm1lPY5fuyn7mTAPmw2h/cenTRlwIC8FIz1VKWh1epQxiGYCITmb7BSb89ER1U6smQKE7u0ki3MHylI/SRIxt/9xcP86X88ysLDeh5USimllFLqwqQVcgUte/gTfeMLV+LqX5g7YX7yqR56rrJxj3aRRj3kVrI/7VMWPFXF42ov3+Y+J+u+kOH0V7oCdp+5RlzrRZVBQ7tIL50fqkL2gIHPY0BIG4oCy0+d5MfpN+5hZ+YO2kGIuGeXb3LuOJZDVAuE8Gj4u1lR4pV1LJnCpqKhNoAzpCMt3WRbTzqvXjomNWoGp/KzMQ3yJigraqJBOsxPCU2BFaKGt6lj2YfECxGCkJNFJQZXg3dISEVIJaGtMlCAF1eBgYtaIOLRfwFJNAHvYZjEAGXBR2PBqmK6i2bQ1BXxTFJTbCYRoH2MFTUEMRAhBkN6k6BN5kIwYi9zFMgYbSfvY6XkRJ/3VJEoJSE9B0i2NkBJBZ3fXJqXEFJA9axBjrOa/Nt/0tOd1cj5LjXF8LHNs6+p8GDc2QMiD5QL+8Jz7yHgAAAAASUVORK5CYII=" style="display:none" crossorigin="anonymous"/>
+<!-- Logo: desenhado via JS no PDF -->
 
 <!-- APP -->
 <div id="app-screen">
@@ -340,11 +339,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">Dados do período</div>
         <div class="form-grid-3">
-          <div class="field">
-            <label>Logo da empresa (para o PDF)</label>
-            <input type="file" id="f-logo-upload" accept="image/*" onchange="carregarLogoUpload(this)" style="font-size:12px;padding:6px 10px"/>
-            <span id="logo-status" style="font-size:11px;color:var(--text3);margin-top:2px"></span>
-          </div>
           <div class="field">
             <label>Setor</label>
             <select id="f-setor" onchange="carregarFuncDoSetor()">
@@ -848,9 +842,101 @@ function renderHistorico(lista) {
     el.innerHTML = '<div class="empty-state"><div class="icon">◎</div><p>Nenhum recibo encontrado.</p></div>';
     return;
   }
-  el.innerHTML = '<table class="hist-table"><thead><tr><th>Funcionário</th><th>CPF</th><th>Setor</th><th>Referência</th><th>Valor</th><th>Gerado em</th></tr></thead><tbody>' +
-    lista.map(r => '<tr><td>' + r.nome + '</td><td style="color:var(--text3);font-size:12px">' + r.cpf + '</td><td><span class="badge-setor">' + r.setor + '</span></td><td>' + r.mes_referencia + '/' + r.ano_referencia + '</td><td>R$ ' + (parseFloat(r.valor) || 0).toFixed(2).replace('.', ',') + '</td><td style="color:var(--text3);font-size:12px">' + (r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—') + '</td></tr>').join('') +
+  el.innerHTML = '<table class="hist-table"><thead><tr><th>Funcionário</th><th>CPF</th><th>Setor</th><th>Referência</th><th>Valor</th><th>Gerado em</th><th></th></tr></thead><tbody>' +
+    lista.map(r => {
+      const enc = encodeURIComponent(JSON.stringify(r));
+      const valorFmt = 'R$ ' + (parseFloat(r.valor) || 0).toFixed(2).replace('.', ',');
+      const data = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—';
+      return '<tr>' +
+        '<td>' + r.nome + '</td>' +
+        '<td style="color:var(--text3);font-size:12px">' + r.cpf + '</td>' +
+        '<td><span class="badge-setor">' + r.setor + '</span></td>' +
+        '<td>' + r.mes_referencia + '/' + r.ano_referencia + '</td>' +
+        '<td>' + valorFmt + '</td>' +
+        '<td style="color:var(--text3);font-size:12px">' + data + '</td>' +
+        '<td><button class="btn btn-gold btn-sm" onclick="reimprimirRecibo(\'' + enc + '\')">⎙ PDF</button></td>' +
+        '</tr>';
+    }).join('') +
     '</tbody></table>';
+}
+
+function reimprimirRecibo(enc) {
+  try {
+    const r = JSON.parse(decodeURIComponent(enc));
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const maxW = pageW - margin * 2;
+    const slotH = pageH / 3;
+    const logoBase64 = getLogoBase64();
+
+    function desenharUm(f, slotIndex) {
+      const yBase = slotIndex * slotH + 8;
+      let y = yBase;
+      const logoH = 10; const logoW = 30;
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', margin, y, logoW, logoH);
+        doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+        doc.text('RECIBO', margin + logoW + 4, y + logoH / 2 + 2);
+      } else {
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+        doc.text('Cartão de Todos Ceilândia', margin, y + 5);
+        doc.setFontSize(13);
+        doc.text('RECIBO', pageW - margin - doc.getStringUnitWidth('RECIBO') * 13 / doc.internal.scaleFactor, y + 7);
+      }
+      y += logoH + 5;
+      doc.setDrawColor(180); doc.setLineWidth(0.3);
+      doc.line(margin, y, pageW - margin, y);
+      doc.setDrawColor(0); doc.setLineWidth(0.2);
+      y += 5;
+
+      const cpfLimpo = f.cpf.replace(/[\.\-]/g, '');
+      const valorRaw = (f.valor || '0').replace(',', '.');
+      const valorNum = parseFloat(valorRaw) || 0;
+      const valorFmt = 'R$ ' + valorNum.toFixed(2).replace('.', ',');
+      const ext = valorPorExtenso(f.valor || '0');
+
+      const partes = [
+        { text: 'Eu ', bold: false },
+        { text: f.nome, bold: true },
+        { text: ', Portador(a) do CPF de nº', bold: false },
+        { text: cpfLimpo, bold: true },
+        { text: ' ,declaro que recebi a quantia de ', bold: false },
+        { text: valorFmt + ' (' + ext + ')', bold: true },
+        { text: ' da empresa Administradora Cartão de Todos Ceilândia LTDA, inscrita no CNPJ 29.334.427/0001-08, referente a premiação por atingimento de meta do mês de ' + f.mes_referencia + '.', bold: false },
+      ];
+      y = textoBoldInline(doc, partes, margin, y, maxW);
+      y += 4;
+
+      const dia = f.dia_recibo || '—';
+      const mesRec = f.mes_recibo || '—';
+      const anoRec = f.ano_recibo || f.ano_referencia || '—';
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text('BRASÍLIA-DF ' + dia + ' DE ' + mesRec + ' ' + anoRec + '.', margin, y);
+      y += 10;
+      doc.setDrawColor(0);
+      doc.line(margin, y, margin + 75, y);
+      y += 5;
+      doc.setFontSize(8);
+      doc.text('ASSINATURA', margin, y);
+
+      if (slotIndex < 2) {
+        const sepY = (slotIndex + 1) * slotH;
+        doc.setLineDash([2, 2]); doc.setDrawColor(160);
+        doc.line(margin, sepY, pageW - margin, sepY);
+        doc.setLineDash([]); doc.setDrawColor(0);
+      }
+    }
+
+    desenharUm(r, 0);
+    doc.save('recibo_' + r.nome.split(' ')[0] + '_' + r.mes_referencia + '.pdf');
+    toast('PDF gerado com sucesso!');
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao gerar PDF: ' + e.message, true);
+  }
 }
 
 async function carregarHistorico() {
@@ -923,31 +1009,45 @@ async function salvarEPDF() {
     const maxW = pageW - margin * 2;
     const slotH = pageH / 3;
 
-    // Carrega logo como base64
-    async function getLogoBase64() {
-      const logoEl = document.getElementById('logo-img');
-      if (logoEl && logoEl.src && logoEl.src.startsWith('data:image')) {
-        return logoEl.src; // já é base64, retorna direto
+    // Gera logo como base64 via canvas (sem depender de arquivo externo)
+    function getLogoBase64() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 70;
+        const ctx = canvas.getContext('2d');
+
+        // Fundo verde escuro
+        ctx.fillStyle = '#1C3A2B';
+        ctx.beginPath();
+        ctx.roundRect(0, 0, 300, 70, 8);
+        ctx.fill();
+
+        // Texto principal
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText('Cartão de Todos', 12, 28);
+
+        // Texto secundário
+        ctx.fillStyle = '#A8D5B5';
+        ctx.font = '13px Arial';
+        ctx.fillText('Ceilândia', 12, 48);
+
+        // Linha dourada decorativa
+        ctx.strokeStyle = '#B8860B';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(12, 54);
+        ctx.lineTo(180, 54);
+        ctx.stroke();
+
+        return canvas.toDataURL('image/png');
+      } catch(e) {
+        return null;
       }
-      return new Promise((resolve) => {
-        if (!logoEl || !logoEl.src) { resolve(null); return; }
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = function() {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            canvas.getContext('2d').drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-          } catch(e) { resolve(null); }
-        };
-        img.onerror = () => resolve(null);
-        img.src = logoEl.src;
-      });
     }
 
-    const logoBase64 = await getLogoBase64();
+    const logoBase64 = getLogoBase64();
 
     function textoBoldInline(doc, partes, x, y, maxW) {
       // partes: [{text, bold}]
@@ -1065,20 +1165,8 @@ async function salvarEPDF() {
 }
 
 // ============================================================
-// LOGO UPLOAD
+// FIM
 // ============================================================
-function carregarLogoUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = document.getElementById('logo-img');
-    img.src = e.target.result;
-    document.getElementById('logo-status').textContent = '✓ Logo carregado: ' + file.name;
-  };
-  reader.readAsDataURL(file);
-}
-
 document.addEventListener('DOMContentLoaded', () => {});
 checkSession();
 </script>
