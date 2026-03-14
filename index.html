@@ -452,7 +452,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div class="page-title">Histórico</div>
         <div class="page-sub">Todos os recibos gerados</div>
       </div>
-      <div class="hist-filters">
+      <div class="hist-filters" style="align-items:center">
         <input type="text" id="hist-busca" placeholder="Buscar por nome..." oninput="filtrarHistorico()"/>
         <select id="hist-setor" onchange="filtrarHistorico()">
           <option value="">Todos os setores</option>
@@ -474,6 +474,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option>
           <option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option>
         </select>
+        <button class="btn btn-gold btn-sm" id="btn-reimprimir-sel" onclick="reimprimirSelecionados()" style="display:none;white-space:nowrap">⎙ PDF Selecionados (<span id="qtd-sel">0</span>)</button>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <div id="hist-content">
@@ -835,36 +836,88 @@ function filtrarHistorico() {
   renderHistorico(lista);
 }
 
+function atualizarBotaoSel() {
+  const checks = document.querySelectorAll('.hist-check:checked');
+  const btn = document.getElementById('btn-reimprimir-sel');
+  const qtd = document.getElementById('qtd-sel');
+  if (!btn || !qtd) return;
+  if (checks.length > 0) {
+    btn.style.display = 'inline-flex';
+    qtd.textContent = checks.length;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
 function renderHistorico(lista) {
   const el = document.getElementById('hist-content');
   if (!el) return;
   if (lista.length === 0) {
     el.innerHTML = '<div class="empty-state"><div class="icon">◎</div><p>Nenhum recibo encontrado.</p></div>';
+    // Esconder botão
+    const btn = document.getElementById('btn-reimprimir-sel');
+    if (btn) btn.style.display = 'none';
     return;
   }
-  // Guardar lista para event listener acessar
   window._historicoLista = lista;
-  el.innerHTML = '<table class="hist-table"><thead><tr><th>Funcionário</th><th>CPF</th><th>Setor</th><th>Referência</th><th>Valor</th><th>Gerado em</th><th></th></tr></thead><tbody>' +
+  el.innerHTML =
+    '<table class="hist-table"><thead><tr>' +
+    '<th><input type="checkbox" id="check-all" title="Selecionar todos"/></th>' +
+    '<th>Funcionário</th><th>CPF</th><th>Setor</th><th>Referência</th><th>Valor</th><th>Gerado em</th><th></th>' +
+    '</tr></thead><tbody>' +
     lista.map((r, idx) => {
       const valorFmt = 'R$ ' + (parseFloat(r.valor) || 0).toFixed(2).replace('.', ',');
       const data = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—';
       return '<tr>' +
+        '<td><input type="checkbox" class="hist-check" data-idx="' + idx + '" onchange="atualizarBotaoSel()"/></td>' +
         '<td>' + r.nome + '</td>' +
         '<td style="color:var(--text3);font-size:12px">' + r.cpf + '</td>' +
         '<td><span class="badge-setor">' + r.setor + '</span></td>' +
         '<td>' + r.mes_referencia + '/' + r.ano_referencia + '</td>' +
         '<td>' + valorFmt + '</td>' +
         '<td style="color:var(--text3);font-size:12px">' + data + '</td>' +
-        '<td><button class="btn btn-gold btn-sm" data-idx="' + idx + '">⎙ PDF</button></td>' +
+        '<td><button class="btn btn-gold btn-sm" data-idx="' + idx + '" title="Gerar PDF deste recibo">⎙</button></td>' +
         '</tr>';
     }).join('') +
     '</tbody></table>';
-  // Event listener usando índice — evita problema de aspas no onclick
+
+  // Selecionar todos
+  document.getElementById('check-all').addEventListener('change', function() {
+    document.querySelectorAll('.hist-check').forEach(c => { c.checked = this.checked; });
+    atualizarBotaoSel();
+  });
+
+  // Botão individual
   el.querySelectorAll('button[data-idx]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       reimprimirRecibo(window._historicoLista[parseInt(this.getAttribute('data-idx'))]);
     });
   });
+}
+
+function reimprimirSelecionados() {
+  const checks = document.querySelectorAll('.hist-check:checked');
+  if (checks.length === 0) { toast('Selecione pelo menos um recibo.', true); return; }
+  const selecionados = Array.from(checks).map(c => window._historicoLista[parseInt(c.getAttribute('data-idx'))]);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const maxW = pageW - margin * 2;
+    const logoBase64 = getLogoBase64();
+    selecionados.forEach((r, i) => {
+      const slotIndex = i % 3;
+      if (i > 0 && slotIndex === 0) doc.addPage();
+      desenharReciboNoPDF(doc, r, slotIndex, pageW, pageH, margin, maxW, logoBase64, r.mes_referencia);
+    });
+    doc.save('recibos_selecionados_' + selecionados.length + '.pdf');
+    toast(selecionados.length + ' recibo(s) gerado(s) com sucesso!');
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao gerar PDF: ' + e.message, true);
+  }
 }
 
 function reimprimirRecibo(r) {
@@ -971,21 +1024,22 @@ function desenharReciboNoPDF(doc, f, slotIndex, pageW, pageH, margin, maxW, logo
   const yBase = slotIndex * slotH + 8;
   let y = yBase;
 
-  // Cabeçalho: logo à esquerda + "RECIBO" à direita, alinhados verticalmente
+  // Cabeçalho: logo à esquerda + "RECIBO" centralizado à direita
   const logoH = 14; const logoW = 42;
 
   if (logoBase64) {
-    // Logo à esquerda
     doc.addImage(logoBase64, 'PNG', margin, y, logoW, logoH);
   } else {
     doc.setFontSize(9); doc.setFont('helvetica', 'bold');
     doc.text('Cartão de Todos Ceilândia', margin, y + logoH / 2 + 3);
   }
 
-  // "RECIBO" à direita, centralizado na altura do logo
+  // "RECIBO" centralizado horizontalmente na metade direita da página
   doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-  const reciboW = doc.getStringUnitWidth('RECIBO') * 14 / doc.internal.scaleFactor;
-  doc.text('RECIBO', pageW - margin - reciboW, y + logoH / 2 + 2);
+  const reciboLabel = 'RECIBO';
+  const reciboW = doc.getStringUnitWidth(reciboLabel) * 14 / doc.internal.scaleFactor;
+  const reciboX = (margin + logoW + pageW - margin) / 2 - reciboW / 2;
+  doc.text(reciboLabel, reciboX, y + logoH / 2 + 2);
 
   y += logoH + 3;
 
