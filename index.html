@@ -325,24 +325,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 <!-- MODAL RLS HELPER -->
 <div class="confirm-overlay" id="modal-rls">
-  <div class="confirm-box" style="max-width:600px">
-    <div class="confirm-title">⚙️ Configurar permissão de exclusão no Supabase</div>
+  <div class="confirm-box" style="max-width:640px">
+    <div class="confirm-title">⚙️ Não foi possível excluir — Configuração necessária</div>
     <div class="confirm-msg" style="font-size:13px;line-height:1.7">
-      Para habilitar a exclusão de registros, execute este SQL no <strong>SQL Editor</strong> do seu projeto Supabase:
-      <pre id="rls-sql" style="background:#1a1a18;color:#e8f0eb;padding:12px;border-radius:8px;margin:12px 0;font-size:12px;overflow-x:auto;white-space:pre-wrap;cursor:pointer" title="Clique para copiar">-- Política DELETE para recibos
-CREATE POLICY "Usuarios autenticados podem excluir recibos"
-ON recibos FOR DELETE
-TO authenticated
-USING (true);
 
--- Política DELETE para funcionarios_cadastro
-CREATE POLICY "Usuarios autenticados podem excluir funcionarios"
-ON funcionarios_cadastro FOR DELETE
-TO authenticated
-USING (true);</pre>
-      <small style="color:var(--text3)">Clique no SQL acima para copiar. Depois acesse: <strong>Supabase → SQL Editor → New Query</strong></small>
+      <div id="rls-error-detail" style="background:#fdf0f0;border:1px solid #e8c0c0;border-radius:6px;padding:10px;font-family:monospace;font-size:11px;margin-bottom:12px;white-space:pre-wrap;color:#8b2020"></div>
+
+      <strong>Execute este SQL no Supabase para liberar a exclusão:</strong>
+      <pre id="rls-sql" style="background:#1a1a18;color:#e8f0eb;padding:12px;border-radius:8px;margin:10px 0;font-size:11px;overflow-x:auto;white-space:pre-wrap;cursor:pointer;border:2px solid transparent" title="Clique para copiar">-- Cole no SQL Editor do Supabase e clique em RUN
+ALTER TABLE recibos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE funcionarios_cadastro ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "del_recibos" ON recibos;
+CREATE POLICY "del_recibos" ON recibos
+  FOR DELETE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "del_funcionarios" ON funcionarios_cadastro;
+CREATE POLICY "del_funcionarios" ON funcionarios_cadastro
+  FOR DELETE TO authenticated USING (true);</pre>
+      <small style="color:var(--text3)">
+        👆 Clique no bloco acima para copiar o SQL.<br>
+        Depois: <strong>Supabase → SQL Editor → New Query → Cole → RUN</strong>
+      </small>
     </div>
     <div class="confirm-actions">
+      <button class="btn btn-outline" style="width:auto" onclick="window.open('https://supabase.com/dashboard','_blank')">Abrir Supabase ↗</button>
       <button class="btn btn-primary" style="width:auto" onclick="document.getElementById('modal-rls').classList.remove('open')">Fechar</button>
     </div>
   </div>
@@ -1100,49 +1107,68 @@ function renderHistorico(lista) {
       }
       confirmar('Excluir recibo', 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.', async () => {
         try {
-          // Tenta primeiro pelo SDK Supabase normal
-          const { error } = await sb.from('recibos').delete().eq('id', id);
-          if (error) {
-            console.error('Erro excluir (SDK):', error);
-            // Fallback: tenta via REST API com token do usuário autenticado
-            const session = await sb.auth.getSession();
-            const token = session?.data?.session?.access_token;
-            if (!token) {
-              toast('Sessão expirada. Faça login novamente.', true);
-              return;
-            }
-            const resp = await fetch(
-              `${SUPABASE_URL}/rest/v1/recibos?id=eq.${id}`,
-              {
-                method: 'DELETE',
-                headers: {
-                  'apikey': SUPABASE_KEY,
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                  'Prefer': 'return=minimal'
-                }
-              }
-            );
-            if (!resp.ok) {
-              const txt = await resp.text();
-              console.error('Erro excluir (REST):', resp.status, txt);
-              if (resp.status === 403 || resp.status === 401) {
-                toast('Sem permissão para excluir. Veja as instruções abaixo.', true);
-                document.getElementById('modal-rls').classList.add('open');
-              } else {
-                toast('Erro ao excluir: ' + resp.status, true);
-              }
-              return;
-            }
+          // Obtém token do usuário logado
+          const sessionData = await sb.auth.getSession();
+          const token = sessionData?.data?.session?.access_token;
+          if (!token) {
+            toast('Sessão expirada. Faça login novamente.', true);
+            return;
           }
-          // Sucesso
+
+          // Faz DELETE via REST API com token do usuário (bypassa problema de RLS com anon)
+          // Usa "count=exact" para saber se realmente deletou algo
+          const resp = await fetch(
+            `${SUPABASE_URL}/rest/v1/recibos?id=eq.${encodeURIComponent(id)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation,count=exact'
+              }
+            }
+          );
+
+          const bodyTxt = await resp.text();
+          console.log('DELETE status:', resp.status, '| body:', bodyTxt, '| id:', id);
+
+          if (!resp.ok) {
+            // Mostra modal de erro detalhado
+            document.getElementById('rls-error-detail').textContent =
+              `Status: ${resp.status}\nID: ${id}\nResposta: ${bodyTxt}`;
+            document.getElementById('modal-rls').classList.add('open');
+            return;
+          }
+
+          // Verifica se realmente deletou (RLS pode silenciosamente não deletar nada)
+          let deletedCount = 0;
+          const countHeader = resp.headers.get('content-range');
+          if (countHeader) {
+            const match = countHeader.match(/\d+/g);
+            deletedCount = match ? parseInt(match[0]) : 0;
+          }
+          // Se body tem dados, também conta
+          if (bodyTxt && bodyTxt !== '[]' && bodyTxt !== 'null') {
+            try { deletedCount = JSON.parse(bodyTxt).length || 1; } catch(e) {}
+          }
+
+          if (deletedCount === 0 && bodyTxt === '[]') {
+            // RLS silencioso - não deletou nada sem dar erro
+            document.getElementById('rls-error-detail').textContent =
+              `Status: ${resp.status} (OK mas 0 registros deletados)\nID: ${id}\nCausa provável: falta de política DELETE no Supabase RLS.`;
+            document.getElementById('modal-rls').classList.add('open');
+            return;
+          }
+
+          // Sucesso real
           todosRecibos = todosRecibos.filter(r => String(r.id) !== id);
           toast('Registro excluído com sucesso!');
           await carregarDashboard();
           _renderHistoricoFiltrado();
         } catch(e) {
           console.error('Erro excluir recibo:', e);
-          toast('Erro inesperado ao excluir.', true);
+          toast('Erro inesperado: ' + e.message, true);
         }
       });
     });
@@ -1368,11 +1394,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Copiar SQL do modal RLS ao clicar
   const rlsSql = document.getElementById('rls-sql');
   if (rlsSql) {
+    rlsSql.addEventListener('mouseenter', () => { rlsSql.style.borderColor = 'var(--accent)'; });
+    rlsSql.addEventListener('mouseleave', () => { rlsSql.style.borderColor = 'transparent'; });
     rlsSql.addEventListener('click', () => {
       navigator.clipboard.writeText(rlsSql.textContent.trim()).then(() => {
-        toast('SQL copiado! Cole no SQL Editor do Supabase.');
+        rlsSql.style.borderColor = '#4caf50';
+        toast('✅ SQL copiado! Cole no SQL Editor do Supabase e clique em RUN.');
+        setTimeout(() => { rlsSql.style.borderColor = 'transparent'; }, 2000);
       }).catch(() => {
-        toast('Selecione e copie o SQL manualmente.');
+        toast('Selecione e copie o SQL manualmente (Ctrl+A, Ctrl+C).');
       });
     });
   }
