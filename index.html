@@ -242,6 +242,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* VALOR INPUT VALIDAÇÃO */
 .valor-input.invalid { border-color:var(--danger) !important; }
 
+
+/* BUSCA FUNCIONÁRIO COM DROPDOWN */
+.func-busca-wrap { position:relative; flex:1; }
+.func-busca-wrap input { width:100%; font-family:inherit; font-size:14px; padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; }
+.func-busca-wrap input:focus { border-color:var(--accent); }
+.func-busca-lista { display:none; position:absolute; top:100%; left:0; right:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-lg); z-index:200; max-height:220px; overflow-y:auto; margin-top:2px; }
+.func-busca-lista.open { display:block; }
+.func-busca-item { padding:9px 14px; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+.func-busca-item:hover { background:var(--accent-light); color:var(--accent); }
+.func-busca-item .cpf-hint { font-size:11px; color:var(--text3); }
+.func-busca-item.ja-adicionado { opacity:0.4; cursor:default; pointer-events:none; }
+.func-busca-vazio { padding:12px 14px; font-size:13px; color:var(--text3); text-align:center; }
+
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .main { margin-left: 0; padding: 1rem; }
@@ -435,14 +448,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">Selecionar funcionários</div>
-        <div style="display:flex;gap:10px;margin-bottom:0.5rem;align-items:center">
-          <input type="text" id="f-func-busca" placeholder="🔍 Buscar funcionário por nome ou CPF..." oninput="filtrarSelectFunc()" style="flex:1;font-family:inherit;font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none"/>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:1rem;align-items:center">
-          <select id="f-func-select" style="flex:1;font-family:var(--font,inherit);font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none">
-            <option value="">— Escolha um funcionário —</option>
-          </select>
-          <button class="btn btn-green" onclick="adicionarFuncSelecionado()">+ Adicionar</button>
+        <div style="display:flex;gap:10px;margin-bottom:1rem;align-items:flex-start">
+          <div class="func-busca-wrap">
+            <input type="text" id="f-func-busca" placeholder="🔍 Digite o nome ou CPF para buscar..." autocomplete="off"
+              oninput="filtrarListaFunc()"
+              onfocus="abrirListaFunc()"
+              onblur="setTimeout(fecharListaFunc, 180)"
+            />
+            <div class="func-busca-lista" id="func-busca-lista"></div>
+          </div>
         </div>
         <div id="func-loading" class="loading" style="display:none"><div class="spinner"></div> Carregando...</div>
         <table class="func-table" id="func-table-el">
@@ -674,57 +688,74 @@ async function carregarFuncDoSetor() {
   // NÃO limpa funcionários já adicionados de outros setores
   renderFuncs();
   const loading = document.getElementById('func-loading');
-  const selectWrap = document.getElementById('f-func-select');
   if (loading) loading.style.display = 'flex';
-  if (selectWrap) selectWrap.innerHTML = '<option value="">Carregando...</option>';
   const { data } = await sb.from('funcionarios_cadastro').select('*').eq('setor', setor).order('nome');
   if (loading) loading.style.display = 'none';
   cadastrosDoSetor = data || [];
   console.log('Setor:', setor, '| Encontrados:', cadastrosDoSetor.length);
-  atualizarSelectFunc();
+  filtrarListaFunc();
 }
 
-function filtrarSelectFunc() {
-  const busca = (document.getElementById('f-func-busca') || {}).value || '';
-  atualizarSelectFunc(busca);
+function filtrarSelectFunc() { filtrarListaFunc(); } // compat
+
+function atualizarSelectFunc() { filtrarListaFunc(); } // compat
+
+function abrirListaFunc() {
+  filtrarListaFunc();
+  const lista = document.getElementById('func-busca-lista');
+  if (lista) lista.classList.add('open');
 }
 
-function atualizarSelectFunc(busca) {
-  busca = (busca || '').toLowerCase();
-  const sel = document.getElementById('f-func-select');
-  if (!sel) return;
-  const jaAdicionados = funcionarios.map(f => f.cpf);
-  sel.innerHTML = '<option value="">— Escolha um funcionário —</option>';
-  cadastrosDoSetor
-    .filter(f => !jaAdicionados.includes(f.cpf))
-    .filter(f => !busca || f.nome.toLowerCase().includes(busca) || (f.cpf||'').includes(busca))
-    .forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f.cpf;
-      opt.textContent = f.nome;
-      sel.appendChild(opt);
+function fecharListaFunc() {
+  const lista = document.getElementById('func-busca-lista');
+  if (lista) lista.classList.remove('open');
+}
+
+function filtrarListaFunc() {
+  const busca = ((document.getElementById('f-func-busca') || {}).value || '').toLowerCase();
+  const lista = document.getElementById('func-busca-lista');
+  if (!lista) return;
+  const jaAdicionados = new Set(funcionarios.map(f => f.cpf));
+  const filtrados = cadastrosDoSetor.filter(f =>
+    !busca || f.nome.toLowerCase().includes(busca) || (f.cpf||'').includes(busca)
+  );
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<div class="func-busca-vazio">Nenhum funcionário encontrado</div>';
+  } else {
+    lista.innerHTML = filtrados.map(f => {
+      const adicionado = jaAdicionados.has(f.cpf);
+      return `<div class="func-busca-item${adicionado ? ' ja-adicionado' : ''}" data-cpf="${f.cpf}">
+        <span>${f.nome}${adicionado ? ' <em style=\'font-size:11px;color:var(--accent)\'>já adicionado</em>' : ''}</span>
+        <span class="cpf-hint">${f.cpf}</span>
+      </div>`;
+    }).join('');
+    lista.querySelectorAll('.func-busca-item:not(.ja-adicionado)').forEach(item => {
+      item.addEventListener('mousedown', function() {
+        const cpf = this.getAttribute('data-cpf');
+        const cadastro = cadastrosDoSetor.find(f => f.cpf === cpf);
+        if (cadastro) {
+          funcionarios.push({ nome: cadastro.nome, cpf: cadastro.cpf, setor: cadastro.setor, valor: '' });
+          document.getElementById('f-func-busca').value = '';
+          filtrarListaFunc();
+          renderFuncs();
+          setTimeout(() => {
+            const inputs = document.querySelectorAll('#func-body .valor-input');
+            if (inputs.length) inputs[inputs.length - 1].focus();
+          }, 80);
+        }
+      });
     });
+  }
+  lista.classList.add('open');
 }
 
 function adicionarFuncSelecionado() {
-  const sel = document.getElementById('f-func-select');
-  const cpf = sel.value;
-  if (!cpf) return;
-  const cadastro = cadastrosDoSetor.find(f => f.cpf === cpf);
-  if (!cadastro) return;
-  funcionarios.push({ nome: cadastro.nome, cpf: cadastro.cpf, setor: cadastro.setor, valor: '' });
-  atualizarSelectFunc();
-  renderFuncs();
-  // focus no valor do recém-adicionado
-  setTimeout(() => {
-    const inputs = document.querySelectorAll('#func-body .valor-input');
-    if (inputs.length) inputs[inputs.length - 1].focus();
-  }, 80);
+  // mantido por compatibilidade — a adição agora é feita pelo dropdown
 }
 
 function removeFunc(i) {
   funcionarios.splice(i, 1);
-  atualizarSelectFunc();
+  filtrarListaFunc();
   renderFuncs();
 }
 
@@ -1013,13 +1044,23 @@ function renderHistorico(lista) {
   // Excluir
   el.querySelectorAll('button[data-del]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const id = this.getAttribute('data-del');
+      const id = String(this.getAttribute('data-del'));
+      if (!id || id === 'null' || id === 'undefined') {
+        toast('ID inválido — não foi possível excluir.', true);
+        return;
+      }
       confirmar('Excluir recibo', 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.', async () => {
         const { error } = await sb.from('recibos').delete().eq('id', id);
-        if (error) { toast('Erro ao excluir: ' + error.message, true); return; }
+        if (error) {
+          console.error('Erro excluir recibo:', error);
+          toast('Erro ao excluir: ' + error.message, true);
+          return;
+        }
+        // Remover da lista local sem recarregar tudo
+        todosRecibos = todosRecibos.filter(r => String(r.id) !== id);
         toast('Registro excluído.');
         await carregarDashboard();
-        await carregarHistorico();
+        _renderHistoricoFiltrado();
       });
     });
   });
