@@ -736,7 +736,7 @@ function filtrarListaFunc() {
         if (cadastro) {
           funcionarios.push({ nome: cadastro.nome, cpf: cadastro.cpf, setor: cadastro.setor, valor: '' });
           document.getElementById('f-func-busca').value = '';
-          filtrarListaFunc();
+          fecharListaFunc();
           renderFuncs();
           setTimeout(() => {
             const inputs = document.querySelectorAll('#func-body .valor-input');
@@ -746,7 +746,6 @@ function filtrarListaFunc() {
       });
     });
   }
-  lista.classList.add('open');
 }
 
 function adicionarFuncSelecionado() {
@@ -1007,7 +1006,7 @@ function renderHistorico(lista) {
         `<td style="color:var(--text3);font-size:12px">${data}</td>` +
         `<td style="display:flex;gap:4px">` +
         `<button class="btn btn-gold btn-sm" data-idx="${realIdx}" title="Gerar PDF">⎙</button>` +
-        `<button class="btn btn-danger btn-sm" data-del="${r.id}" title="Excluir registro">🗑</button>` +
+        `<button class="btn btn-danger btn-sm" data-del="${r.id}" title="Excluir registro">🗑 Excluir</button>` +
         `</td></tr>`;
     }).join('') +
     '</tbody></table>';
@@ -1053,7 +1052,11 @@ function renderHistorico(lista) {
         const { error } = await sb.from('recibos').delete().eq('id', id);
         if (error) {
           console.error('Erro excluir recibo:', error);
-          toast('Erro ao excluir: ' + error.message, true);
+          if (error.code === '42501' || error.message.toLowerCase().includes('permission') || error.message.toLowerCase().includes('policy')) {
+            toast('Sem permissão para excluir. Verifique as políticas RLS no Supabase.', true);
+          } else {
+            toast('Erro ao excluir: ' + error.message, true);
+          }
           return;
         }
         // Remover da lista local sem recarregar tudo
