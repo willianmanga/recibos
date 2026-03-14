@@ -1034,11 +1034,11 @@ function desenharReciboNoPDF(doc, f, slotIndex, pageW, pageH, margin, maxW, logo
     doc.text('Cartão de Todos Ceilândia', margin, y + logoH / 2 + 3);
   }
 
-  // "RECIBO" centralizado horizontalmente na metade direita da página
+  // "RECIBO" centralizado no centro exato da página
   doc.setFontSize(14); doc.setFont('helvetica', 'bold');
   const reciboLabel = 'RECIBO';
   const reciboW = doc.getStringUnitWidth(reciboLabel) * 14 / doc.internal.scaleFactor;
-  const reciboX = (margin + logoW + pageW - margin) / 2 - reciboW / 2;
+  const reciboX = (pageW / 2) - (reciboW / 2);
   doc.text(reciboLabel, reciboX, y + logoH / 2 + 2);
 
   y += logoH + 3;
