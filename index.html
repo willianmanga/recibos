@@ -842,9 +842,10 @@ function renderHistorico(lista) {
     el.innerHTML = '<div class="empty-state"><div class="icon">◎</div><p>Nenhum recibo encontrado.</p></div>';
     return;
   }
+  // Guardar lista para event listener acessar
+  window._historicoLista = lista;
   el.innerHTML = '<table class="hist-table"><thead><tr><th>Funcionário</th><th>CPF</th><th>Setor</th><th>Referência</th><th>Valor</th><th>Gerado em</th><th></th></tr></thead><tbody>' +
-    lista.map(r => {
-      const enc = encodeURIComponent(JSON.stringify(r));
+    lista.map((r, idx) => {
       const valorFmt = 'R$ ' + (parseFloat(r.valor) || 0).toFixed(2).replace('.', ',');
       const data = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—';
       return '<tr>' +
@@ -854,15 +855,20 @@ function renderHistorico(lista) {
         '<td>' + r.mes_referencia + '/' + r.ano_referencia + '</td>' +
         '<td>' + valorFmt + '</td>' +
         '<td style="color:var(--text3);font-size:12px">' + data + '</td>' +
-        '<td><button class="btn btn-gold btn-sm" onclick="reimprimirRecibo(\'' + enc + '\')">⎙ PDF</button></td>' +
+        '<td><button class="btn btn-gold btn-sm" data-idx="' + idx + '">⎙ PDF</button></td>' +
         '</tr>';
     }).join('') +
     '</tbody></table>';
+  // Event listener usando índice — evita problema de aspas no onclick
+  el.querySelectorAll('button[data-idx]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      reimprimirRecibo(window._historicoLista[parseInt(this.getAttribute('data-idx'))]);
+    });
+  });
 }
 
-function reimprimirRecibo(enc) {
+function reimprimirRecibo(r) {
   try {
-    const r = JSON.parse(decodeURIComponent(enc));
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const pageW = doc.internal.pageSize.getWidth();
@@ -964,21 +970,27 @@ function desenharReciboNoPDF(doc, f, slotIndex, pageW, pageH, margin, maxW, logo
   const slotH = pageH / 3;
   const yBase = slotIndex * slotH + 8;
   let y = yBase;
-  const logoH = 12; const logoW = 36;
+
+  // Cabeçalho: logo à esquerda + "RECIBO" à direita, alinhados verticalmente
+  const logoH = 14; const logoW = 42;
 
   if (logoBase64) {
+    // Logo à esquerda
     doc.addImage(logoBase64, 'PNG', margin, y, logoW, logoH);
-    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-    doc.text('RECIBO', margin + logoW + 4, y + logoH / 2 + 2);
   } else {
     doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-    doc.text('Cartão de Todos Ceilândia', margin, y + 5);
-    doc.setFontSize(13);
-    doc.text('RECIBO', pageW - margin - doc.getStringUnitWidth('RECIBO') * 13 / doc.internal.scaleFactor, y + 7);
+    doc.text('Cartão de Todos Ceilândia', margin, y + logoH / 2 + 3);
   }
-  y += logoH + 5;
 
-  doc.setDrawColor(180); doc.setLineWidth(0.3);
+  // "RECIBO" à direita, centralizado na altura do logo
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+  const reciboW = doc.getStringUnitWidth('RECIBO') * 14 / doc.internal.scaleFactor;
+  doc.text('RECIBO', pageW - margin - reciboW, y + logoH / 2 + 2);
+
+  y += logoH + 3;
+
+  // Linha separadora
+  doc.setDrawColor(180); doc.setLineWidth(0.4);
   doc.line(margin, y, pageW - margin, y);
   doc.setDrawColor(0); doc.setLineWidth(0.2);
   y += 5;
