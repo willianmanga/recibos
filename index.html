@@ -318,7 +318,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="confirm-msg" id="confirm-msg"></div>
     <div class="confirm-actions">
       <button class="btn btn-outline" onclick="confirmarFechar()">Cancelar</button>
-      <button class="btn btn-primary" id="confirm-ok" style="width:auto">Confirmar</button>
+      <button class="btn btn-primary" id="confirm-ok" style="width:auto" onclick="confirmarOk()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -1063,7 +1063,7 @@ function renderHistorico(lista) {
         `<td style="color:var(--text3);font-size:12px">${data}</td>` +
         `<td style="display:flex;gap:4px">` +
         `<button class="btn btn-gold btn-sm" data-idx="${realIdx}" title="Gerar PDF">⎙</button>` +
-        `<button class="btn btn-danger btn-sm" data-del="${r.id}" title="Excluir registro">🗑 Excluir</button>` +
+        `<button class="btn btn-danger btn-sm" onclick="excluirRecibo('${r.id}')" title="Excluir registro">🗑 Excluir</button>` +
         `</td></tr>`;
     }).join('') +
     '</tbody></table>';
@@ -1097,81 +1097,63 @@ function renderHistorico(lista) {
       reimprimirRecibo(r);
     });
   });
-  // Excluir
-  el.querySelectorAll('button[data-del]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const id = String(this.getAttribute('data-del'));
-      if (!id || id === 'null' || id === 'undefined') {
-        toast('ID inválido — não foi possível excluir.', true);
+}
+
+// ============================================================
+// EXCLUIR RECIBO — função global chamada via onclick
+// ============================================================
+async function excluirRecibo(id) {
+  id = String(id);
+  if (!id || id === 'null' || id === 'undefined') {
+    toast('ID inválido.', true);
+    return;
+  }
+  confirmar('Excluir recibo', 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.', async () => {
+    try {
+      const sessionData = await sb.auth.getSession();
+      const token = sessionData?.data?.session?.access_token;
+      if (!token) { toast('Sessão expirada. Faça login novamente.', true); return; }
+
+      const resp = await fetch(
+        `${SUPABASE_URL}/rest/v1/recibos?id=eq.${encodeURIComponent(id)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          }
+        }
+      );
+
+      const bodyTxt = await resp.text();
+      console.log('DELETE recibo | status:', resp.status, '| id:', id, '| body:', bodyTxt);
+
+      if (!resp.ok) {
+        document.getElementById('rls-error-detail').textContent =
+          `Status HTTP: ${resp.status}\nID do recibo: ${id}\nResposta: ${bodyTxt}`;
+        document.getElementById('modal-rls').classList.add('open');
         return;
       }
-      confirmar('Excluir recibo', 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.', async () => {
-        try {
-          // Obtém token do usuário logado
-          const sessionData = await sb.auth.getSession();
-          const token = sessionData?.data?.session?.access_token;
-          if (!token) {
-            toast('Sessão expirada. Faça login novamente.', true);
-            return;
-          }
 
-          // Faz DELETE via REST API com token do usuário (bypassa problema de RLS com anon)
-          // Usa "count=exact" para saber se realmente deletou algo
-          const resp = await fetch(
-            `${SUPABASE_URL}/rest/v1/recibos?id=eq.${encodeURIComponent(id)}`,
-            {
-              method: 'DELETE',
-              headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation,count=exact'
-              }
-            }
-          );
+      // RLS silencioso: retornou 200 mas não deletou nada
+      if (bodyTxt === '[]' || bodyTxt === 'null' || bodyTxt === '') {
+        document.getElementById('rls-error-detail').textContent =
+          `Status HTTP: ${resp.status} (sucesso, mas 0 registros deletados)\nID: ${id}\nCausa: política DELETE não configurada no Supabase RLS.`;
+        document.getElementById('modal-rls').classList.add('open');
+        return;
+      }
 
-          const bodyTxt = await resp.text();
-          console.log('DELETE status:', resp.status, '| body:', bodyTxt, '| id:', id);
-
-          if (!resp.ok) {
-            // Mostra modal de erro detalhado
-            document.getElementById('rls-error-detail').textContent =
-              `Status: ${resp.status}\nID: ${id}\nResposta: ${bodyTxt}`;
-            document.getElementById('modal-rls').classList.add('open');
-            return;
-          }
-
-          // Verifica se realmente deletou (RLS pode silenciosamente não deletar nada)
-          let deletedCount = 0;
-          const countHeader = resp.headers.get('content-range');
-          if (countHeader) {
-            const match = countHeader.match(/\d+/g);
-            deletedCount = match ? parseInt(match[0]) : 0;
-          }
-          // Se body tem dados, também conta
-          if (bodyTxt && bodyTxt !== '[]' && bodyTxt !== 'null') {
-            try { deletedCount = JSON.parse(bodyTxt).length || 1; } catch(e) {}
-          }
-
-          if (deletedCount === 0 && bodyTxt === '[]') {
-            // RLS silencioso - não deletou nada sem dar erro
-            document.getElementById('rls-error-detail').textContent =
-              `Status: ${resp.status} (OK mas 0 registros deletados)\nID: ${id}\nCausa provável: falta de política DELETE no Supabase RLS.`;
-            document.getElementById('modal-rls').classList.add('open');
-            return;
-          }
-
-          // Sucesso real
-          todosRecibos = todosRecibos.filter(r => String(r.id) !== id);
-          toast('Registro excluído com sucesso!');
-          await carregarDashboard();
-          _renderHistoricoFiltrado();
-        } catch(e) {
-          console.error('Erro excluir recibo:', e);
-          toast('Erro inesperado: ' + e.message, true);
-        }
-      });
-    });
+      // Sucesso
+      todosRecibos = todosRecibos.filter(r => String(r.id) !== id);
+      toast('Registro excluído com sucesso!');
+      await carregarDashboard();
+      _renderHistoricoFiltrado();
+    } catch(e) {
+      console.error('Erro excluir recibo:', e);
+      toast('Erro: ' + e.message, true);
+    }
   });
 }
 
@@ -1384,13 +1366,16 @@ function confirmar(titulo, msg, callback) {
 }
 function confirmarFechar() {
   document.getElementById('modal-confirm').classList.remove('open');
-  _confirmCallback = null;
+}
+function confirmarOk() {
+  document.getElementById('modal-confirm').classList.remove('open');
+  if (_confirmCallback) {
+    const fn = _confirmCallback;
+    _confirmCallback = null;
+    fn();
+  }
 }
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('confirm-ok').addEventListener('click', () => {
-    confirmarFechar();
-    if (_confirmCallback) _confirmCallback();
-  });
   // Copiar SQL do modal RLS ao clicar
   const rlsSql = document.getElementById('rls-sql');
   if (rlsSql) {
